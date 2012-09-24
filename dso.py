@@ -46,31 +46,34 @@ class DSOWaveForm:
 	def printHLD(self):
 		for (state, duration) in self.hld:
 			print "%d - %d" % (state, duration)
-	def decodeBits(self, skip=0):
-		stack = self.hld[skip:]
+
+class ShutterWaveForm(DSOWaveForm):
+	def decodeBits(self):
+		stack = self.hld
 		stack.reverse()
+		preembule_start = stack.pop()
+		preembule_end = stack.pop()
+		if preembule_start[0] != 0 or abs(preembule_start[1]-250) > 3:
+			print "preembule_start not found %s" % (preembule_start,)
+			return None
+		if preembule_end[0] != 1 or abs(preembule_end[1]-30) > 2:
+			print "preembule_end not found %s" % (preembule_end,)
+			return None
 		state1, duration1 = stack.pop()
 		if state1 != 0:
 			state1, duration1 = stack.pop()	
 		state2, duration2 = stack.pop()
-		bitCount = 0
+		bits = ""
 		while True:
 			if state1 == 0 and state2 == 1 and abs(duration1+duration2-40) < 2:
 				if abs(duration1-30) < 3 and abs(duration2-10) < 3:
-					bitCount += 1
-					print 0,
-					if bitCount % 8 == 0:
-						print
+					bits += "0"
 				elif abs(duration2-30) < 3 and abs(duration1-10) < 3:
-					bitCount += 1
-					print 1,
-					if bitCount % 8 == 0:
-						print
+					bits += "1"
 				else:
 					print "can't decode bit"
 					break
 			elif state1 == 0 and state2 == 1 and abs(duration1-25) < 2 and abs(duration2-25) < 2:
-				print "end (transmittion succeed)"
 				break
 			else:
 				print "invalid transition (%d %d %d %d)" % (state1, state2, duration1, duration2)
@@ -81,10 +84,11 @@ class DSOWaveForm:
 			else:
 				print "stack empty (transmittion truncated ?)"
 				break
+		return bits
 if __name__ == "__main__":
 	import sys
-	d = DSOWaveForm()
+	d = ShutterWaveForm()
 	d.load(sys.argv[1])
 	d.computeHLDurations()
 	d.printHLD()
-	d.decodeBits(2)
+	print d.decodeBits()
