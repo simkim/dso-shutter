@@ -1,14 +1,20 @@
+# -*- coding: utf-8 -*-
+
 from xml.dom.minidom import parse
 
 class DSOWaveForm:
+	""" load and perform a basic digital to binary transformation """
 	domRoot = None
 	profile = None
 	points = None
+
 	def __init__(self):
 		self.profile = {}
 		self.points = []
 		self.hld = []
+
 	def load(self, filename):
+		""" load information from a dso xml export """
 		# load dom
 		self.domRoot = parse(filename)
 		# load profile
@@ -27,7 +33,9 @@ class DSOWaveForm:
 			seq = int(point.getElementsByTagName("seq")[0].firstChild.nodeValue)
 			value = float(point.getElementsByTagName("val")[0].firstChild.nodeValue)
 			self.points.append((seq, value))
+
 	def computeHLDurations(self):
+		""" convert to binary (HIGH/LOW states) """
 		assert len(self.points) > 0
 		triggerIndex = int(self.profile["triggerIndex"])
 		triggerKind  = self.profile["triggerKind"]
@@ -35,7 +43,7 @@ class DSOWaveForm:
 		lastState = 0 if triggerKind=="EdgeFalling" else 1
 		duration = 0
 		for seq, val in self.points[triggerIndex:-1]:
-			state = 1 if val > 0.7 else 0
+			state = 1 if val > 5 else 0
 			if state != lastState:
 				self.hld.append((lastState, duration))
 				lastState = state
@@ -43,12 +51,16 @@ class DSOWaveForm:
 			else:
 				duration += 1
 		self.hld.append((lastState, duration))
+
 	def printHLD(self):
+		""" print HIGH/LOW informations """
 		for (state, duration) in self.hld:
 			print "%d - %d" % (state, duration)
 
 class ShutterWaveForm(DSOWaveForm):
+	""" Specific code to handle an ASPMAT® remote control"""
 	def decodeBits(self):
+		""" decode start/bits/end """
 		stack = self.hld
 		stack.reverse()
 		preembule_start = stack.pop()
@@ -85,6 +97,7 @@ class ShutterWaveForm(DSOWaveForm):
 				print "stack empty (transmittion truncated ?)"
 				break
 		return bits
+
 if __name__ == "__main__":
 	import sys
 	d = ShutterWaveForm()
