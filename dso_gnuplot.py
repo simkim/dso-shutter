@@ -1,6 +1,7 @@
 #!/usr/bin/python
  
-from numpy import *
+""" helper script to transorm dso xml export files to png graph using Gnuplot """
+
 import Gnuplot, Gnuplot.funcutils
 from xml.dom.minidom import parse
  
@@ -16,7 +17,7 @@ def d(filename, skip=None):
 	data = data[skip:-1]
 	return Gnuplot.Data(data,**{'title':filename,'with':"lines"})
 
-g('set output "/tmp/myGraph.png"')
+g('set output "/tmp/dso.png"')
 g('set terminal png size 3200,240 ')
 g._add_to_queue([d("BUFFER/FILE002.XML"),d("BUFFER/FILE004.XML")])
 g.replot()
